@@ -55,6 +55,12 @@ public class MorseDecoder {
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
+            int numberOfFrames = inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            double sampleSum = 0;
+            for (int frame = 0; frame < numberOfFrames; frame++) {
+                sampleSum += Math.abs(sampleBuffer[frame]);
+            }
+            returnBuffer[binIndex] = sampleSum;
         }
         return returnBuffer;
     }
@@ -63,7 +69,7 @@ public class MorseDecoder {
     private static final double POWER_THRESHOLD = 10;
 
     /** Bin threshold for dots or dashes. Related to BIN_SIZE. You may need to modify this value. */
-    private static final int DASH_BIN_COUNT = 8;
+    private static final int DASH_BIN_COUNT = 12;
 
     /**
      * Convert power measurements to dots, dashes, and spaces.
@@ -81,13 +87,31 @@ public class MorseDecoder {
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
          */
-
-        // if ispower and waspower
-        // else if ispower and not waspower
-        // else if issilence and wassilence
-        // else if issilence and not wassilence
-
-        return "";
+        String message = "";
+        int binsOn = 0;
+        int binsOff = 0;
+        for (int bin = 0; bin < powerMeasurements.length; bin++) {
+            if (binsOn > 0 && powerMeasurements[bin] >= POWER_THRESHOLD) {
+                binsOn += 1;
+            } else if (binsOn > 0 && powerMeasurements[bin] < POWER_THRESHOLD) {
+                if (binsOn >= DASH_BIN_COUNT) {
+                    message += "-";
+                } else {
+                    message += ".";
+                }
+                binsOn = 0;
+                binsOff += 1;
+            } else if (binsOff > 0 && powerMeasurements[bin] < POWER_THRESHOLD) {
+                binsOff += 1;
+            } else {
+                if (binsOff >= DASH_BIN_COUNT) {
+                    message += " ";
+                }
+                binsOff = 0;
+                binsOn += 1;
+            }
+        }
+        return message;
     }
 
     /**
